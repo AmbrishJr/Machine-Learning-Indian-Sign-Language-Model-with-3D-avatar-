@@ -86,9 +86,5 @@ Both ML models run in the browser via [transformers.js](https://github.com/huggi
 - Word Error Rate (WER): 6.39%
 - Animation Similarity Score: 4.87/5
 
-## 👥 Contributors
-- Ambrish.S (Chennai Institiute of Technology)
-- Muthu Kumaran.M (Chennai Institiute of Technology)
-
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
