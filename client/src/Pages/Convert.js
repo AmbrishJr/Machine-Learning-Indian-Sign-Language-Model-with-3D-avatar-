@@ -1,15 +1,15 @@
-import '../App.css'
 import React, { useState, useEffect, useRef } from "react";
-import Slider from 'react-input-slider';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'font-awesome/css/font-awesome.min.css';
 
-import ybot from '../Models/ybot/ybot.glb';
-import ybotPic from '../Models/ybot/ybot.png';
+import { AVATAR_MODEL, applyAvatarStyle, styleScene, mountAvatarCanvas } from '../Avatar/avatar';
+import PageHeader from '../Components/Layout/PageHeader';
+import AvatarStage from '../Components/Workspace/AvatarStage';
+import PlaybackControls from '../Components/Workspace/PlaybackControls';
 
-import * as words from '../Animations/words';
-import * as alphabets from '../Animations/alphabets';
 import { defaultPose } from '../Animations/defaultPose';
+import { translate } from '../Translation/translate';
+import { performPlan } from '../Translation/signPlanner';
+import { semanticWorker, describeProgress } from '../Translation/mlWorker';
+import { useWhisperRecorder } from '../Translation/useWhisperRecorder';
 
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
@@ -18,21 +18,35 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 
 function Convert() {
   const [text, setText] = useState("");
-  const [bot] = useState(ybot); // Removed setBot since we only have one avatar
+  const bot = AVATAR_MODEL;
   const [speed, setSpeed] = useState(0.1);
   const [pause, setPause] = useState(800);
 
   const componentRef = useRef({});
   const { current: ref } = componentRef;
 
-  let textFromAudio = React.createRef();
-  let textFromInput = React.createRef();
+  const [inputText, setInputText] = useState("");
+  const [gloss, setGloss] = useState("");
+  const [useGrammar, setUseGrammar] = useState(true);
+  const [useSemantic, setUseSemantic] = useState(true);
+  const [translating, setTranslating] = useState(false);
+  const [mlStatus, setMlStatus] = useState(null);
+  const [warning, setWarning] = useState(null);
 
   const {
     transcript,
     listening,
     resetTranscript,
+    browserSupportsSpeechRecognition,
   } = useSpeechRecognition();
+
+  const [speechEngine, setSpeechEngine] = useState(
+    browserSupportsSpeechRecognition ? 'browser' : 'whisper'
+  );
+  const whisper = useWhisperRecorder();
+  const speechText = speechEngine === 'whisper' ? whisper.transcript : transcript;
+
+  useEffect(() => semanticWorker.onProgress((data) => setMlStatus(describeProgress(data))), []);
 
   useEffect(() => {
 
@@ -40,53 +54,14 @@ function Convert() {
     ref.pending = false;
 
     ref.animations = [];
-    ref.characters = [];
 
     ref.scene = new THREE.Scene();
-    ref.scene.background = new THREE.Color(0xdddddd);
-
-    const spotLight = new THREE.SpotLight(0xffffff, 2);
-    spotLight.position.set(0, 5, 5);
-    ref.scene.add(spotLight);
-    ref.renderer = new THREE.WebGLRenderer({ antialias: true });
-
-    ref.camera = new THREE.PerspectiveCamera(
-        30,
-        window.innerWidth * 0.57 / (window.innerHeight - 70),
-        0.1,
-        1000
-    )
-    ref.renderer.setSize(window.innerWidth * 0.57, window.innerHeight - 70);
-
-    document.getElementById("canvas").innerHTML = "";
-    document.getElementById("canvas").appendChild(ref.renderer.domElement);
-
-    ref.camera.position.z = 1.6;
-    ref.camera.position.y = 1.4;
+    styleScene(ref.scene);
+    const unmountCanvas = mountAvatarCanvas(ref, document.getElementById("canvas"));
 
     let loader = new GLTFLoader();
     const onLoad = (gltf) => {
-      gltf.scene.traverse((child) => {
-        if (child.type === 'SkinnedMesh') {
-          child.frustumCulled = false;
-          
-          // Simple blue material for all parts
-          if (child.material) {
-            const material = new THREE.MeshToonMaterial({
-              color: 0x4e8cff, // Blue color
-              shininess: 30,
-              specular: 0x111111,
-              flatShading: true
-            });
-            
-            if (Array.isArray(child.material)) {
-              child.material = child.material.map(() => material);
-            } else {
-              child.material = material;
-            }
-          }
-        }
-      });
+      applyAvatarStyle(gltf.scene);
       
       // Remove existing avatar if it exists
       if (ref.avatar) {
@@ -95,19 +70,17 @@ function Convert() {
       
       ref.avatar = gltf.scene;
       ref.scene.add(ref.avatar);
+      ref.renderOnce();
       defaultPose(ref);
-    };
-
-    const onProgress = (xhr) => {
-      console.log((xhr.loaded / xhr.total * 100) + '% loaded');
     };
 
     const onError = (error) => {
       console.error('Error loading model:', error);
     };
 
-    loader.load(bot, onLoad, onProgress, onError);
+    loader.load(bot, onLoad, undefined, onError);
 
+    return unmountCanvas;
   }, [ref, bot]);
 
   ref.animate = () => {
@@ -152,105 +125,122 @@ function Convert() {
     ref.renderer.render(ref.scene, ref.camera);
   }
 
-  const sign = (inputRef) => {
-    
-    var str = inputRef.current.value.toUpperCase();
-    var strWords = str.split(' ');
-    setText('')
-
-    for(let word of strWords){
-      if(words[word]){
-        ref.animations.push(['add-text', word+' ']);
-        words[word](ref);
-        
-      }
-      else{
-        for(const [index, ch] of word.split('').entries()){
-          if(index === word.length-1)
-            ref.animations.push(['add-text', ch+' ']);
-          else 
-            ref.animations.push(['add-text', ch]);
-          alphabets[ch](ref);
-          
-        }
-      }
+  const sign = async (str) => {
+    if (!str.trim() || translating) return;
+    setText('');
+    setWarning(null);
+    setTranslating(true);
+    try {
+      const result = await translate(str, { grammar: useGrammar, semantic: useSemantic });
+      setGloss(result.tokens.map((t) => t.gloss.replace(/_/g, '-')).join(' '));
+      setWarning(result.warning || null);
+      performPlan(result.plan, ref);
+      // On narrow screens the avatar sits above the controls; bring it into view.
+      if (window.innerWidth < 992) document.getElementById('canvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } finally {
+      setTranslating(false);
+      setMlStatus(null);
     }
   }
 
   const startListening = () =>{
-    SpeechRecognition.startListening({continuous: true});
+    if (speechEngine === 'whisper') whisper.start();
+    else SpeechRecognition.startListening({continuous: true});
   }
 
   const stopListening = () =>{
-    SpeechRecognition.stopListening();
+    if (speechEngine === 'whisper') whisper.stop();
+    else SpeechRecognition.stopListening();
   }
 
+  const clearSpeech = () => {
+    if (speechEngine === 'whisper') whisper.reset();
+    else resetTranscript();
+  }
+
+  const speechStatus = speechEngine === 'whisper'
+    ? { idle: 'off', recording: 'recording', transcribing: 'transcribing…' }[whisper.status]
+    : (listening ? 'on' : 'off');
+  const speechPill = { on: 'live', recording: 'live', 'transcribing…': 'busy' }[speechStatus] || '';
+
   return (
-    <div className='container-fluid'>
-      <div className='row'>
-        <div className='col-md-3'>
-          <label className='label-style'>
-            Processed Text
-          </label>
-          <textarea rows={3} value={text} className='w-100 input-style' readOnly />
-          <label className='label-style'>
-            Speech Recognition: {listening ? 'on' : 'off'}
-          </label>
-          <div className='space-between'>
-            <button className="btn btn-primary btn-style w-33" onClick={startListening}>
-              Mic On <i className="fa fa-microphone"/>
+    <div className='page-container'>
+      <PageHeader
+        title='Convert to ISL'
+        subtitle='Type or speak in English and the avatar signs it in Indian Sign Language.'
+      />
+      <div className='workspace'>
+        <div className='workspace-panel'>
+          <section className='surface-card panel-card'>
+            <h2 className='panel-title'><span><i className='fa fa-keyboard-o' />Type text</span></h2>
+            <textarea rows={4} value={inputText} onChange={(e) => setInputText(e.target.value)}
+                      placeholder='e.g. Hello, how are you?' className='form-control' aria-label='Text to sign' />
+            <button onClick={() => {sign(inputText)}} disabled={translating || !inputText.trim()}
+                    className='btn btn-primary w-100 mt-3'>
+              <i className='fa fa-play' />{translating ? 'Translating…' : 'Sign this text'}
             </button>
-            <button className="btn btn-primary btn-style w-33" onClick={stopListening}>
-              Mic Off <i className="fa fa-microphone-slash"/>
+          </section>
+
+          <section className='surface-card panel-card'>
+            <h2 className='panel-title'>
+              <span><i className='fa fa-microphone' />Speak</span>
+              <span className={`status-pill ${speechPill}`}>Mic {speechStatus}</span>
+            </h2>
+            <select
+              className='form-select'
+              aria-label='Speech recognition engine'
+              value={speechEngine}
+              onChange={(e) => { stopListening(); setSpeechEngine(e.target.value); }}
+            >
+              <option value='browser' disabled={!browserSupportsSpeechRecognition}>
+                Browser speech API{browserSupportsSpeechRecognition ? '' : ' (not supported)'}
+              </option>
+              <option value='whisper'>Whisper ML model (on-device)</option>
+            </select>
+            <div className='btn-row mt-2'>
+              <button className="btn btn-soft" onClick={startListening}>
+                <i className="fa fa-microphone"/>Start
+              </button>
+              <button className="btn btn-soft" onClick={stopListening}>
+                <i className="fa fa-stop"/>Stop
+              </button>
+              <button className="btn btn-soft" onClick={clearSpeech}>
+                <i className="fa fa-eraser"/>Clear
+              </button>
+            </div>
+            <textarea rows={3} value={speechText} placeholder='Your speech appears here…'
+                      className='form-control mt-2' readOnly aria-label='Speech transcript' />
+            {speechEngine === 'whisper' && (whisper.progress || whisper.error) &&
+              <p className={whisper.error ? 'ml-status error' : 'ml-status'}>{whisper.error || whisper.progress}</p>}
+            <button onClick={() => {sign(speechText)}} disabled={translating || !speechText.trim()}
+                    className='btn btn-primary w-100 mt-3'>
+              <i className='fa fa-play' />Sign speech
             </button>
-            <button className="btn btn-primary btn-style w-33" onClick={resetTranscript}>
-              Clear
-            </button>
-          </div>
-          <textarea rows={3} ref={textFromAudio} value={transcript} placeholder='Speech input ...' className='w-100 input-style' />
-          <button onClick={() => {sign(textFromAudio)}} className='btn btn-primary w-100 btn-style btn-start'>
-            Start Animations
-          </button>
-          <label className='label-style'>
-            Text Input
-          </label>
-          <textarea rows={3} ref={textFromInput} placeholder='Text input ...' className='w-100 input-style' />
-          <button onClick={() => {sign(textFromInput)}} className='btn btn-primary w-100 btn-style btn-start'>
-            Start Animations
-          </button>
+          </section>
+
+          <section className='surface-card panel-card'>
+            <h2 className='panel-title'><span><i className='fa fa-sliders' />Translation</span></h2>
+            <div className='form-check form-switch'>
+              <input className='form-check-input' type='checkbox' role='switch' id='use-grammar' checked={useGrammar} onChange={(e) => setUseGrammar(e.target.checked)} />
+              <label className='form-check-label' htmlFor='use-grammar'>ISL grammar (NLP reordering)</label>
+            </div>
+            <div className='form-check form-switch mt-1'>
+              <input className='form-check-input' type='checkbox' role='switch' id='use-semantic' checked={useSemantic} onChange={(e) => setUseSemantic(e.target.checked)} />
+              <label className='form-check-label' htmlFor='use-semantic'>Smart sign matching (ML model)</label>
+            </div>
+            {(mlStatus || warning) &&
+              <p className={warning ? 'ml-status warn' : 'ml-status'}>{warning || mlStatus}</p>}
+          </section>
         </div>
-        <div className='col-md-7'>
-          <div id='canvas'/>
-        </div>
-        <div className='col-md-2'>
-          <p className='bot-label'>
-            Avatar
-          </p>
-          <img src={ybotPic} className='bot-image col-md-11' alt='YBOT Avatar'/>
-          <p className='label-style'>
-            Animation Speed: {Math.round(speed*100)/100}
-          </p>
-          <Slider
-            axis="x"
-            xmin={0.05}
-            xmax={0.50}
-            xstep={0.01}
-            x={speed}
-            onChange={({ x }) => setSpeed(x)}
-            className='w-100'
-          />
-          <p className='label-style'>
-            Pause time: {pause} ms
-          </p>
-          <Slider
-            axis="x"
-            xmin={0}
-            xmax={2000}
-            xstep={100}
-            x={pause}
-            onChange={({ x }) => setPause(x)}
-            className='w-100'
-          />
+
+        <div className='workspace-stage'>
+          <AvatarStage captionLabel='Signing' caption={text} emptyCaption='Type or speak something to start'>
+            {gloss &&
+              <div className='chips' aria-label='ISL gloss'>
+                {gloss.split(' ').map((g, i) => <span key={i} className='chip'>{g}</span>)}
+              </div>}
+          </AvatarStage>
+          <PlaybackControls speed={speed} setSpeed={setSpeed} pause={pause} setPause={setPause} />
         </div>
       </div>
     </div>

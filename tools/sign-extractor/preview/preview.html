@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Sign preview</title>
+<style>body{margin:0;background:#ddd}</style></head>
+<body>
+<script type="importmap">
+{ "imports": { "three": "/client/node_modules/three/build/three.module.js" } }
+</script>
+<script type="module">
+// Renders the avatar exactly like the app (the app's own three.js, same camera) for a given set of bone rotations.
+import * as THREE from 'three';
+import { GLTFLoader } from '/client/node_modules/three/examples/jsm/loaders/GLTFLoader.js';
+
+const DEFAULT = { 'mixamorigNeck.x': Math.PI / 12, 'mixamorigLeftArm.z': -Math.PI / 3, 'mixamorigLeftForeArm.y': -Math.PI / 1.5,
+                  'mixamorigRightArm.z': Math.PI / 3, 'mixamorigRightForeArm.y': Math.PI / 1.5 };
+const W = 480, H = 540;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xdddddd);
+const light = new THREE.SpotLight(0xffffff, 2); light.position.set(0, 5, 5); scene.add(light);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.1, 1000);
+camera.position.set(0, 1.4, 1.6);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+document.body.appendChild(renderer.domElement);
+
+const gltf = await new GLTFLoader().loadAsync('/client/src/Models/avatar/avatar.glb');
+gltf.scene.traverse((c) => { if (c.isSkinnedMesh) { c.frustumCulled = false; c.material = new THREE.MeshToonMaterial({ color: 0x4e8cff }); } });
+const avatar = gltf.scene; scene.add(avatar);
+const bones = {}; const rest = {};
+avatar.traverse((o) => { if (o.isBone) { bones[o.name] = o; rest[o.name] = o.rotation.clone(); } });
+
+window.setPose = (values) => {
+  Object.entries(bones).forEach(([name, b]) => b.rotation.copy(rest[name]));
+  for (const [ch, v] of Object.entries({ ...DEFAULT, ...values })) {
+    const [name, axis] = ch.split('.');
+    if (bones[name]) bones[name].rotation[axis] = v;
+  }
+  renderer.render(scene, camera);
+};
+window.setPose({});
+window.ready = true;
+</script>
+</body>
+</html>

@@ -1,16 +1,15 @@
-import '../App.css'
 import axios from 'axios';
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams } from 'react-router-dom'
-import Slider from 'react-input-slider';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'font-awesome/css/font-awesome.min.css';
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, Link } from 'react-router-dom'
 
-import ybot from '../Models/ybot/ybot.glb';
-import ybotPic from '../Models/ybot/ybot.png';
+import { AVATAR_MODEL, applyAvatarStyle, styleScene, mountAvatarCanvas } from '../Avatar/avatar';
+import { defaultPose } from '../Animations/defaultPose';
+import PageHeader from '../Components/Layout/PageHeader';
+import AvatarStage from '../Components/Workspace/AvatarStage';
+import PlaybackControls from '../Components/Workspace/PlaybackControls';
 
-import * as words from '../Animations/words';
-import * as alphabets from '../Animations/alphabets';
+import { translate } from '../Translation/translate';
+import { performPlan } from '../Translation/signPlanner';
 
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
@@ -20,43 +19,18 @@ import { baseURL } from '../Config/config'
 
 function Video() {
   const [text, setText] = useState("");
-  const [bot] = useState(ybot); // Removed setBot since we only have one avatar
+  const bot = AVATAR_MODEL;
   const [speed, setSpeed] = useState(0.1);
   const [pause, setPause] = useState(800);
   const [invalidId, setInvalidId] = useState(false)
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
 
-  const defaultPose = useCallback((ref) => {
-    if (!ref.avatar) return;
-    
-    const boneNames = [
-      "mixamorigRightHandThumb1", "mixamorigRightHandThumb2", "mixamorigRightHandThumb3",
-      "mixamorigRightHandIndex1", "mixamorigRightHandIndex2", "mixamorigRightHandIndex3",
-      "mixamorigRightHandMiddle1", "mixamorigRightHandMiddle2", "mixamorigRightHandMiddle3",
-      "mixamorigRightHandRing1", "mixamorigRightHandRing2", "mixamorigRightHandRing3",
-      "mixamorigRightHandPinky1", "mixamorigRightHandPinky2", "mixamorigRightHandPinky3",
-      "mixamorigLeftHandThumb1", "mixamorigLeftHandThumb2", "mixamorigLeftHandThumb3",
-      "mixamorigLeftHandIndex1", "mixamorigLeftHandIndex2", "mixamorigLeftHandIndex3",
-      "mixamorigLeftHandMiddle1", "mixamorigLeftHandMiddle2", "mixamorigLeftHandMiddle3",
-      "mixamorigLeftHandRing1", "mixamorigLeftHandRing2", "mixamorigLeftHandRing3",
-      "mixamorigLeftHandPinky1", "mixamorigLeftHandPinky2", "mixamorigLeftHandPinky3"
-    ];
-
-    boneNames.forEach(boneName => {
-      const bone = ref.avatar.getObjectByName(boneName);
-      if (bone) {
-        bone.rotation.set(0, 0, 0);
-      }
-    });
-  }, []);
-
   const params = useParams()
+  const [videoId, setVideoId] = useState(params.videoId || '')
 
   const componentRef = useRef({});
   const { current: ref } = componentRef;
-
-  let id = React.createRef();
 
   useEffect(() => {
 
@@ -64,53 +38,14 @@ function Video() {
     ref.pending = false;
 
     ref.animations = [];
-    ref.characters = [];
 
     ref.scene = new THREE.Scene();
-    ref.scene.background = new THREE.Color(0xdddddd);
-
-    const spotLight = new THREE.SpotLight(0xffffff, 2);
-    spotLight.position.set(0, 5, 5);
-    ref.scene.add(spotLight);
-
-    ref.camera = new THREE.PerspectiveCamera(
-        30,
-        window.innerWidth*0.57 / (window.innerHeight - 70),
-        0.1,
-        1000
-    )
-
-    ref.renderer = new THREE.WebGLRenderer({ antialias: true });
-    ref.renderer.setSize(window.innerWidth*0.57, window.innerHeight - 70);
-    document.getElementById("canvas").innerHTML = "";
-    document.getElementById("canvas").appendChild(ref.renderer.domElement);
-
-    ref.camera.position.z = 1.6;
-    ref.camera.position.y = 1.4;
+    styleScene(ref.scene);
+    const unmountCanvas = mountAvatarCanvas(ref, document.getElementById("canvas"));
 
     let loader = new GLTFLoader();
     const onLoad = (gltf) => {
-      gltf.scene.traverse((child) => {
-        if (child.type === 'SkinnedMesh') {
-          child.frustumCulled = false;
-          
-          // Simple blue material for all parts
-          if (child.material) {
-            const material = new THREE.MeshToonMaterial({
-              color: 0x4e8cff, // Blue color
-              shininess: 30,
-              specular: 0x111111,
-              flatShading: true
-            });
-            
-            if (Array.isArray(child.material)) {
-              child.material = child.material.map(() => material);
-            } else {
-              child.material = material;
-            }
-          }
-        }
-      });
+      applyAvatarStyle(gltf.scene);
       
       // Remove existing avatar if it exists
       if (ref.avatar) {
@@ -119,22 +54,20 @@ function Video() {
       
       ref.avatar = gltf.scene;
       ref.scene.add(ref.avatar);
+      ref.renderOnce();
       defaultPose(ref);
-    };
-
-    const onProgress = (xhr) => {
-      console.log((xhr.loaded / xhr.total * 100) + '% loaded');
     };
 
     const onError = (error) => {
       console.error('Error loading model:', error);
     };
 
-    loader.load(bot, onLoad, onProgress, onError);
+    loader.load(bot, onLoad, undefined, onError);
 
-    id.current.value=params.videoId
+    return unmountCanvas;
+  }, [ref, bot]);
 
-  }, [ref, bot, id, params.videoId, defaultPose]);
+  useEffect(() => setVideoId(params.videoId || ''), [params.videoId]);
 
   ref.animate = () => {
     if(ref.animations.length === 0){
@@ -178,99 +111,50 @@ function Video() {
     ref.renderer.render(ref.scene, ref.camera);
   }
 
-  const sign = (str) => {
-    str = str.toUpperCase();
-    var strWords = str.split(' ');
+  const sign = async (str) => {
     setText('')
-
-    for(let word of strWords){
-      if(words[word]){
-        ref.animations.push(['add-text', word+' ']);
-        words[word](ref);
-        
-      }
-      else{
-        for(const [index, ch] of word.split('').entries()){
-          if(index === word.length-1)
-            ref.animations.push(['add-text', ch+' ']);
-          else 
-            ref.animations.push(['add-text', ch]);
-          alphabets[ch](ref);
-          
-        }
-      }
-    }
+    const { plan } = await translate(str || '');
+    performPlan(plan, ref);
   }
 
   const animateFromID = () => {
-      const videoID = id.current.value;
+      const videoID = videoId.trim();
       axios.get(`${baseURL}/videos/${videoID}`).then((res) => {
-        console.log(res.data)
         setTitle(res.data.title)
         setDesc(res.data.desc)
         sign(res.data.content);
       }).catch(err => {
-        console.log(err)
+        console.error(err)
         setInvalidId(true)
       });
   }
 
   return (
-    <div className='container-fluid'>
-      <div className='row'>
-        <div className='col-md-3'>
-          <label className='label-style'>
-              Video ID
-          </label>
-          <input ref={id} splaceholder='Video ID' className='w-100 input-style' />
-          <button onClick={animateFromID} className='btn btn-primary w-100 btn-style btn-start mb-3'>
-              Start Video
-          </button>
-          <hr />
-          {title && 
-            <div className='d-flex flex-column justify-content-center align-items-center mt-3'>
-            <label className='h3'>{title}</label>
-            <label>{desc}</label>
-            <div className='w-100'>
-              <label className='label-style mt-4'>
-                Processed Text
-              </label>
-              <textarea rows={10} value={text} className='w-100 input-style mt-2' readOnly />
-              </div>
-          </div>}
+    <div className='page-container'>
+      <PageHeader title='Play a video' subtitle='Open an ISL video by its ID and the avatar signs its content.'>
+        <Link to='/sign-kit/all-videos' className='btn btn-soft'><i className='fa fa-th-large' />All videos</Link>
+      </PageHeader>
+      <div className='workspace'>
+        <div className='workspace-panel'>
+          <section className='surface-card panel-card'>
+            <h2 className='panel-title'><span><i className='fa fa-film' />Video ID</span></h2>
+            <form onSubmit={(e) => { e.preventDefault(); animateFromID(); }}>
+              <input value={videoId} onChange={(e) => setVideoId(e.target.value)} placeholder='Paste a video ID'
+                     className='form-control' aria-label='Video ID' />
+              <button type='submit' disabled={!videoId.trim()} className='btn btn-primary w-100 mt-3'>
+                <i className='fa fa-play' />Start video
+              </button>
+            </form>
+          </section>
+          {title &&
+            <section className='surface-card panel-card'>
+              <h2 className='video-meta-title'>{title}</h2>
+              <p className='video-meta-desc'>{desc}</p>
+            </section>}
         </div>
-        <div className='col-md-7'>
-          <div id='canvas'/>
-        </div>
-        <div className='col-md-2'>
-          <p className='bot-label'>
-            Avatar
-          </p>
-          <img src={ybotPic} className='bot-image col-md-11' alt='YBOT Avatar'/>
-          <p className='label-style'>
-            Animation Speed: {Math.round(speed*100)/100}
-          </p>
-          <Slider
-            axis="x"
-            xmin={0.05}
-            xmax={0.50}
-            xstep={0.01}
-            x={speed}
-            onChange={({ x }) => setSpeed(x)}
-            className='w-100'
-          />
-          <p className='label-style'>
-            Pause time: {pause} ms
-          </p>
-          <Slider
-            axis="x"
-            xmin={0}
-            xmax={2000}
-            xstep={100}
-            x={pause}
-            onChange={({ x }) => setPause(x)}
-            className='w-100'
-          />
+        <div className='workspace-stage'>
+          <AvatarStage captionLabel='Signing' caption={text} emptyCaption='Start a video to see it signed' />
+          <PlaybackControls speed={speed} setSpeed={setSpeed} pause={pause} setPause={setPause} />
         </div>
       </div>
       <Modal show={invalidId} onHide={() => setInvalidId(false)}>

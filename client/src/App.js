@@ -10,6 +10,7 @@ import Navbar from './Components/Navbar';
 import CreateVideo from './Pages/CreateVideo';
 import Footer from './Components/Footer';
 import Videos from './Pages/Videos';
+import AvatarStudio from './Pages/AvatarStudio';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -28,6 +29,7 @@ function AnimatedRoutes() {
 
   const wrap = (element) => (
     <motion.main
+      className="app-main"
       key={location.pathname}
       initial="initial"
       animate="animate"
@@ -48,6 +50,7 @@ function AnimatedRoutes() {
         <Route exact path='/sign-kit/all-videos' element={wrap(<Videos />)} />
         <Route exact path='/sign-kit/video/:videoId' element={wrap(<Video />)} />
         <Route exact path='/sign-kit/create-video' element={wrap(<CreateVideo />)} />
+        <Route exact path='/sign-kit/avatar' element={wrap(<AvatarStudio />)} />
         <Route exact path='*' element={wrap(<Home />)} />
       </Routes>
     </AnimatePresence>
@@ -57,7 +60,7 @@ function AnimatedRoutes() {
 function App() {
   return(
     <Router>
-      <div>
+      <div className="app-shell">
         <Navbar />
         <AnimatedRoutes />
         <Footer />

@@ -1,0 +1,16 @@
+datasets/include/Pronouns/i/MVI_0001.MOV I
+datasets/include/Pronouns/he/MVI_0005.MOV HE
+datasets/include/Pronouns/she/MVI_0010.MOV SHE
+datasets/include/Pronouns/it/MVI_0013.MOV IT
+datasets/include/Pronouns/we/MVI_0018.MOV WE
+datasets/include/Pronouns/they/MVI_0026.MOV THEY
+datasets/include/Pronouns/you_(plural)/MVI_0022.MOV YOU_PLURAL
+datasets/include/Greetings/hello/MVI_0029.MOV HELLO
+datasets/include/Greetings/thank_you/MVI_0006.MOV THANK_YOU
+datasets/include/Greetings/alright/MVI_0037.MOV ALRIGHT
+datasets/include/Greetings/pleased/MVI_0010.MOV PLEASED
+datasets/include/Greetings/good_morning/MVI_0043.MOV GOOD_MORNING
+datasets/include/Greetings/good_afternoon/MVI_0046.MOV GOOD_AFTERNOON
+datasets/include/Greetings/good_evening/MVI_0052.MOV GOOD_EVENING
+datasets/include/Greetings/good_night/MVI_0002.MOV GOOD_NIGHT
+datasets/include/Greetings/how_are_you/MVI_0033.MOV HOW_ARE_YOU

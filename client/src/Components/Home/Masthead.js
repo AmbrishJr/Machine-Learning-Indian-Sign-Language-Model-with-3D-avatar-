@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import ybotPreview from "../../Models/ybot/ybot.png";
+import avatarPreview from "../../Assets/avatar-preview.png";
 
 function Masthead() {
   return (
@@ -9,7 +9,7 @@ function Masthead() {
         <div className="hero-grid">
           <div>
             <span className="eyebrow">3D Avatar • ISL Toolkit</span>
-            <h1 className="hero-title">ISL Genie</h1>
+            <h1 className="hero-title">ISL <span className="gradient-text">Genie</span></h1>
             <p className="hero-subtitle">
               Convert speech and text into Indian Sign Language.
             </p>
@@ -41,7 +41,7 @@ function Masthead() {
               </div>
             </div>
             <img
-              src={ybotPreview}
+              src={avatarPreview}
               className="avatar-preview"
               alt="3D avatar preview"
               loading="lazy"

@@ -1,2 +1,14 @@
 node_modules
 .vercel
+
+# Large ML datasets (downloaded locally, never committed)
+datasets/
+tools/sign-extractor/.venv/
+tools/sign-extractor/models/
+tools/sign-extractor/out/
+tools/sign-extractor/node_modules/
+tools/sign-extractor/package-lock.json
+__pycache__/
+
+# macOS metadata
+.DS_Store

@@ -1,12 +1,14 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Row, Col, Form, Button } from "react-bootstrap";
+import { Form } from "react-bootstrap";
 import VideoCard from "../Components/Videos/VideoCard";
+import PageHeader from "../Components/Layout/PageHeader";
 import { baseURL } from "../Config/config";
 
 function Videos() {
   const [videos, setVideos] = useState([]);
+  const [status, setStatus] = useState("loading"); // loading | ready | error
   const [videoId, setVideoId] = useState("");
   const [validated, setValidated] = useState(false);
   const navigate = useNavigate();
@@ -16,10 +18,11 @@ function Videos() {
       .get(`${baseURL}/videos/all-videos`)
       .then((res) => {
         setVideos(res.data);
-        console.log(res.data);
+        setStatus("ready");
       })
       .catch((err) => {
-        console.log(err);
+        setStatus("error");
+        console.error(err);
       });
   };
 
@@ -41,128 +44,81 @@ function Videos() {
     navigate(`/sign-kit/video/${videoId}`, { replace: false });
   };
 
-  const videoList = videos.map((video, index) => (
-    <VideoCard key={index} video={video} handleClick={handleClick} />
-  ));
-
   return (
-    <div className="container-fluid d-flex flex-column align-items-center px-0">
-      <div className="container-fluid text-white" style={{backgroundColor: 'rgba(9,9,121)'}}>
-        <div className="container my-5">
-          <div className="display-5 px-2 text-center">
-            Explore ISL Videos!
+    <div className="page-container">
+      <PageHeader
+        title="ISL videos"
+        subtitle="Create public or private ISL videos, share them by ID, or browse what the community has made."
+      >
+        <Link to="/sign-kit/create-video" className="btn btn-primary">
+          <i className="fa fa-plus" />Create video
+        </Link>
+      </PageHeader>
+
+      <div className="feature-grid">
+        <section className="surface-card feature-card">
+          <div className="feature-icon"><i className="fa fa-magic" /></div>
+          <h2>Create a new video</h2>
+          <p>
+            Provide your content as text, speech or a file and keep the video private or share it with
+            everyone. Each video gets an ID that opens it directly.
+          </p>
+          <div className="mt-auto">
+            <Link to="/sign-kit/create-video" className="btn btn-soft">
+              Start creating <i className="fa fa-arrow-right ms-1" />
+            </Link>
           </div>
-          <div className="lead text-center">
-            Welcome to the ISL video section of ISL Genie. Create your own public
-            or private videos, share with your friends and colleagues or browse
-            through the videos created by others and shared with the entire
-            community!
-          </div>
-        </div>
+        </section>
+
+        <section className="surface-card feature-card">
+          <div className="feature-icon"><i className="fa fa-link" /></div>
+          <h2>Open a video</h2>
+          <p>Have a video ID? Open the video directly.</p>
+          <Form noValidate validated={validated} onSubmit={handleSubmit} className="mt-auto">
+            <Form.Group controlId="videoId">
+              <Form.Label className="visually-hidden">Video ID</Form.Label>
+              <div className="d-flex gap-2 align-items-start">
+                <div className="flex-grow-1">
+                  <Form.Control
+                    required
+                    type="text"
+                    placeholder="Enter the video ID"
+                    value={videoId}
+                    name="title"
+                    onChange={(e) => setVideoId(e.target.value)}
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    Please enter a video ID.
+                  </Form.Control.Feedback>
+                </div>
+                <button type="submit" className="btn btn-primary text-nowrap">Open</button>
+              </div>
+            </Form.Group>
+          </Form>
+        </section>
       </div>
 
-      <hr />
-
-      <section id="create-video">
-        <div className="container">
-          <div className="row my-4">
-            <div
-              className="col-md-12 d-flex justify-content-center align-items-center"
-              style={{ flexDirection: "column" }}
-            >
-              <div className="h2 section-heading">Create a new video!</div>
-              <div className="col-lg-4 divider my-2" />
-              <div className="text-center normal-text">
-                Create your own video within a few clicks! Provide your content
-                via text, speech or file and keep the videos private or share
-                them with the entire community! Each video generates a video ID
-                which can be used to access the video directly.
-              </div>
-              <Link to='/sign-kit/create-video' className="btn btn-primary mt-4">
-                Create your own Video!
-              </Link>
-            </div>
-          </div>
+      <section>
+        <div className="section-heading-row">
+          <h2>Community videos</h2>
+          {status === "ready" && <span className="chip">{videos.length} videos</span>}
         </div>
-      </section>
-
-      <div className="hor-line" />
-
-      <section id="Open-video">
-        <div className="container">
-          <div className="row mt-3">
-            <div
-              className="col-md-12 d-flex justify-content-center align-items-center"
-              style={{ flexDirection: "column" }}
-            >
-              <div className="h2 section-heading">Open a video</div>
-              <div className="col-lg-4 divider my-2" />
-              <div className="text-center normal-text">
-                Open a video directly by using the associated video ID!
-              </div>
-            </div>
+        {status === "ready" && videos.length > 0 && (
+          <div className="video-grid">
+            {videos.map((video, index) => (
+              <VideoCard key={index} video={video} handleClick={handleClick} />
+            ))}
           </div>
-        </div>
-      </section>
-
-      <Row className="container mb-3">
-        <Form
-          noValidate
-          validated={validated}
-          onSubmit={handleSubmit}
-          className="d-flex flex-column justify-content-center align-items-center p-0"
-        >
-          <Form.Group
-            controlId="videoId"
-            as={Col}
-            xs="12"
-            md="7"
-            className="my-3"
-          >
-            <Form.Label>Enter the Video ID</Form.Label>
-            <Form.Control
-              required
-              type="text"
-              placeholder="Enter the Video ID here..."
-              value={videoId}
-              name="title"
-              onChange={(e) => setVideoId(e.target.value)}
-            />
-            <Form.Control.Feedback>Looks good!</Form.Control.Feedback>
-            <Form.Control.Feedback type="invalid">
-              Please enter a video Id.
-            </Form.Control.Feedback>
-          </Form.Group>
-
-          <Button type="submit" className="my-2">
-            Open Video
-          </Button>
-        </Form>
-      </Row>
-
-      <div className="hor-line" />
-
-      <section id="Open-video">
-        <div className="container">
-          <div className="row mt-3">
-            <div
-              className="col-md-12 d-flex justify-content-center align-items-center"
-              style={{ flexDirection: "column" }}
-            >
-              <div className="h2 section-heading">Your Video Feed</div>
-              <div className="col-lg-4 divider my-2" />
-              <div className="text-center normal-text">
-                Browse through the ISL videos created by others and shared with
-                the entire community!
-              </div>
-            </div>
+        )}
+        {status !== "ready" || videos.length === 0 ? (
+          <div className="surface-card empty-state">
+            <div><i className={`fa ${status === "loading" ? "fa-circle-o-notch fa-spin" : status === "error" ? "fa-cloud" : "fa-film"}`} /></div>
+            {status === "loading" && <p className="mb-0">Loading videos…</p>}
+            {status === "error" && <p className="mb-0">Couldn't reach the video service. You can still open a video by its ID.</p>}
+            {status === "ready" && <p className="mb-0">No public videos yet. Be the first to create one!</p>}
           </div>
-        </div>
+        ) : null}
       </section>
-
-      <div className="row container d-flex flex-column justify-content-center align-items-center">
-        {videoList}
-      </div>
     </div>
   );
 }

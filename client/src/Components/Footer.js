@@ -3,71 +3,49 @@ import { Link } from 'react-router-dom'
 
 function Footer() {
     return (
-        <footer className="page-footer font-small unique-color-dark mt-5">
-
-            <div style={{backgroundColor:'#6351ce'}}>
-                <div className="container">
-                    <div className="row py-4 d-flex justify-content-center align-items-center">
-                        <div className="col-md-6 col-lg-5 text-center footer-text text-white">
-                            Check out our <a href="https://github.com/AmbrishJr" className='footer-link' target="_blank" rel="noopener noreferrer">Github repo</a> for more information!
-                        </div>
+        <footer className="app-footer">
+            <div className="container-xl px-3 px-lg-4">
+                <div className="footer-grid">
+                    <div className="footer-about">
+                        <h6>ISL Genie</h6>
+                        <p className="mb-2">A comprehensive toolkit containing various features related to Indian Sign Language.</p>
+                        <a href="https://github.com/AmbrishJr" target="_blank" rel="noopener noreferrer">
+                            <i className="fa fa-github me-1" /> View on GitHub
+                        </a>
+                    </div>
+                    <div>
+                        <h6>Services</h6>
+                        <ul>
+                            <li><Link to='/sign-kit/convert'>Convert</Link></li>
+                            <li><Link to='/sign-kit/learn-sign'>Learn Sign</Link></li>
+                            <li><Link to='/sign-kit/all-videos'>Videos</Link></li>
+                            <li><Link to='/sign-kit/avatar'>Avatar Studio</Link></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h6>Useful links</h6>
+                        <ul>
+                            <li><Link to='/sign-kit/home'>Home</Link></li>
+                            <li><a href="https://github.com/AmbrishJr" target="_blank" rel="noopener noreferrer">Github repo</a></li>
+                        </ul>
+                    </div>
+                    <div className="footer-contact-col">
+                        <h6>Contact</h6>
+                        <ul className="footer-contact">
+                            <li><i className="fa fa-map-marker" />Chennai, Tamil Nadu</li>
+                            <li><i className="fa fa-envelope" /><a href="mailto:10d.ambrish.s.2376@gmail.com">10d.ambrish.s.2376@gmail.com</a></li>
+                            <li><i className="fa fa-envelope" /><a href="mailto:muthumkm2411@gmail.com">muthumkm2411@gmail.com</a></li>
+                            <li><i className="fa fa-linkedin" /><a href="https://www.linkedin.com/in/ambrish-s-a42296290/" target="_blank" rel="noopener noreferrer">Ambrish S</a></li>
+                            <li><i className="fa fa-linkedin" /><a href="https://www.linkedin.com/in/muthu-kumaran-m-125653290/" target="_blank" rel="noopener noreferrer">Muthu Kumaran M</a></li>
+                        </ul>
                     </div>
                 </div>
-            </div>
-
-            <div className='container-fluid text-white pt-3' style={{backgroundColor:'rgba(33,37,41,1)'}}>
-                <div className="container text-md-left mt-5">
-                    <div className="row mt-3">
-                        <div className="col-md-3 col-lg-4 col-xl-3 mx-auto mb-4">
-                            <h6 className="text-uppercase font-weight-bold">ISL GENIE</h6>
-                            <hr className="deep-purple accent-2 mb-4 mt-0 d-inline-block mx-auto" style={{width:'60px'}}/>
-                            <p className='footer-text'>A comprehensive toolkit containing various features related to Indian Sign Language.</p>
-                        </div>
-                        <div className="col-md-2 col-lg-2 col-xl-2 mx-auto mb-4">
-                            <h6 className="text-uppercase font-weight-bold">Services</h6>
-                            <hr className="deep-purple accent-2 mb-4 mt-0 d-inline-block mx-auto" style={{width:'60px'}} />
-                            <p><Link to='/sign-kit/convert' className='footer-link'>Convert</Link></p>
-                            <p><Link to='/sign-kit/learn-sign' className='footer-link'>Learn Sign</Link></p>
-                            <p><Link to='/sign-kit/all-videos' className='footer-link'>Videos</Link></p>
-                        </div>
-
-                        <div className="col-md-3 col-lg-2 col-xl-2 mx-auto mb-4">
-                            <h6 className="text-uppercase font-weight-bold">Useful links</h6>
-                            <hr className="deep-purple accent-2 mb-4 mt-0 d-inline-block mx-auto" style={{width:'60px'}} />
-                            <p><Link to='/sign-kit/home' className='footer-link'>Home</Link></p>
-                            <p><a href="https://github.com/AmbrishJr" className='footer-link' target="_blank" rel="noopener noreferrer">Github repo</a></p>
-                        </div>
-
-                        <div className="col-md-4 col-lg-3 col-xl-3 mx-auto mb-md-0 mb-4">
-                            <h6 className="text-uppercase font-weight-bold">Contact</h6>
-                            <hr className="deep-purple accent-2 mb-4 mt-0 d-inline-block mx-auto" style={{width:'60px'}}/>
-                            <div className="d-flex align-items-center mb-2">
-                                <i className="fa fa-lg fa-home me-3" style={{minWidth: '20px', textAlign: 'center'}}></i>
-                                <span className='footer-text'>Chennai, Tamil Nadu</span>
-                            </div>
-                            <div className="d-flex align-items-center mb-2">
-                                <i className="fa fa-envelope me-3" style={{minWidth: '20px', textAlign: 'center'}}></i>
-                                <span className='footer-text'>10d.ambrish.s.2376@gmail.com</span>
-                            </div>
-                            <div className="d-flex align-items-center mb-2">
-                                <i className="fa fa-envelope me-3" style={{minWidth: '20px', textAlign: 'center'}}></i>
-                                <span className='footer-text'>muthumkm2411@gmail.com</span>
-                            </div>
-                            <div className="d-flex align-items-center mb-2">
-                                <i className="fa fa-linkedin me-3" style={{minWidth: '20px', textAlign: 'center'}}></i>
-                                <a href="https://www.linkedin.com/in/ambrish-s-a42296290/" target="_blank" rel="noopener noreferrer" className='footer-link'>Ambrish S</a>
-                            </div>
-                            <div className="d-flex align-items-center mb-2">
-                                <i className="fa fa-linkedin me-3" style={{minWidth: '20px', textAlign: 'center'}}></i>
-                                <a href="https://www.linkedin.com/in/muthu-kumaran-m-125653290/" target="_blank" rel="noopener noreferrer" className='footer-link'>Muthu Kumaran M</a>
-                            </div>
-                        </div>
-                    </div>
+                <div className="footer-bottom">
+                    <span>© {new Date().getFullYear()} ISL Genie</span>
+                    <span>Core course project</span>
                 </div>
-
-                <div className="footer-copyright text-center py-3" style={{ color: '#808080' }}>CORE COURSE PROJECT</div>
             </div>
-            </footer>
+        </footer>
     )
 }
 

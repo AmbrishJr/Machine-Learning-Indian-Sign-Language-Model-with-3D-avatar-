@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "cd client && NODE_OPTIONS=--openssl-legacy-provider npm run dev",
-    "vercel-build": "cd client && npm install && npm run build"
+    "dev": "cd client && NODE_OPTIONS=--openssl-legacy-provider npm run dev"
   }
 }

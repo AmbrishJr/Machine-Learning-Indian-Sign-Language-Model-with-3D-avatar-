@@ -30,7 +30,14 @@ Sign Kit is a comprehensive web application designed to bridge the communication
 ### Avatar Technology
 - **3D Modeling**: Custom rigged 3D character
 - **Animation**: Skeletal animation system
-- **Sign Language Generation**: Machine learning model trained on ISL datasets
+- **Sign Language Generation**: skeletal keyframes on a single Mixamo-rigged avatar, whose look can be customised in the **Avatar Studio** page (`/sign-kit/avatar`). The original signs (HOME, PERSON, TIME, YOU, A–Z) are hand-made. The other 16 word signs (greetings and pronouns) were **extracted from real ISL videos** with MediaPipe; see [`tools/sign-extractor`](tools/sign-extractor/README.md).
+
+### Translation Pipeline (`client/src/Translation/`)
+1. **English → ISL gloss (NLP)**: POS tagging and lemmatisation with [compromise](https://github.com/spencermountain/compromise), then ISL grammar rules: drop articles and copulas, time markers first, verb last (SOV), negation after the verb, question words at the end. Example: *"I am not going to the market tomorrow"* → `TOMORROW I MARKET GO NOT`.
+2. **Sign lookup**: fixed expressions first (*thank you*, *how are you*, *good morning*…), then an exact sign, then a curated synonym, then the **ML semantic matcher** ([all-MiniLM-L6-v2](https://huggingface.co/Xenova/all-MiniLM-L6-v2) sentence embeddings, cosine similarity ≥ 0.55, content words only), e.g. *house* → HOME, *lady* → PERSON. Anything else is fingerspelled.
+3. **Speech**: the browser Web Speech API, or **Whisper** ([whisper-base.en](https://huggingface.co/onnx-community/whisper-base.en)) running on-device.
+
+Both ML models run in the browser via [transformers.js](https://github.com/huggingface/transformers.js) in Web Workers (`client/public/ml/`). They are downloaded from the Hugging Face Hub on first use (~25 MB and ~80 MB) and cached by the browser.
 - **Rendering**: WebGL for smooth 3D visualization
 
 ## 🚀 Getting Started
@@ -44,20 +51,12 @@ Sign Kit is a comprehensive web application designed to bridge the communication
 
 1. **Clone the repository**
    ```bash
-<<<<<<< HEAD
-   git clone https://github.com/spectre900/Sign-Kit-An-Avatar-based-ISL-Toolkit.git
-=======
    git clone https://github.com/AmbrishJr/ISL-APP-WITH-3D-AVATAR-.git
->>>>>>> master
    ```
 
 2. **Navigate to the project directory**
    ```bash
-<<<<<<< HEAD
-   cd Sign-Kit-An-Avatar-based-ISL-Toolkit
-=======
    cd ISL-APP-WITH-3D-AVATAR-
->>>>>>> master
    ```
 
 3. **Install dependencies**

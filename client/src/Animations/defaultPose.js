@@ -1,6 +1,5 @@
 export const defaultPose = (ref) => {
     
-    ref.characters.push(' ')
     let animations = []
     
     animations.push(["mixamorigNeck", "rotation", "x", Math.PI/12, "+"]);
